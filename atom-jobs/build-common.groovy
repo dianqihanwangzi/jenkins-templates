@@ -512,13 +512,13 @@ def release() {
         return
     }
     checkoutCode(GIT_HASH,repo)
-    def WS = pwd()
     dir("resource") {
         checkoutCode("main","git@github.com:PingCAP-CBG/tidb-dashboard-distro.git")
     }
     // some build need this token.
     withCredentials([string(credentialsId: 'sre-bot-token', variable: 'TOKEN')]) {
-        if (repo == "pd") {
+        if (REPO == "pd") {
+            def WS = pwd()
             sh """
             sudo yum install java-1.8.0-openjdk-devel -y
             wget https://nodejs.org/dist/v12.22.6/node-v12.22.6-linux-x64.tar.gz
