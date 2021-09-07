@@ -54,7 +54,8 @@ repoUrlMap = [
         binlog  : 'git@github.com:pingcap/tidb-binlog.git',
         dm      : 'git@github.com:pingcap/dm.git',
         tics    : 'git@github.com:pingcap/tics.git',
-        tiem    : 'git@github.com:pingcap-inc/tiem.git'
+        tiem    : 'git@github.com:pingcap-inc/tiem.git',
+        docs-cn : 'git@github.com:pingcap/docs-cn.git',
 ]
 
 def repoValid = repoUrlMap.containsKey(REPO)
