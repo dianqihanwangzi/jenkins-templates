@@ -36,7 +36,7 @@ def run_with_pod(Closure body) {
 
 def check_image(image) {
     withCredentials([string(credentialsId: 'sre-bot-token', variable: 'GITHUB_TOKEN')]) {
-        sh "trivy image ${image}"
+        sh "trivy image --severity HIGH,CRITICAL ${image}"
     }
 }
 
