@@ -92,6 +92,7 @@ def createPipelineRun(PipelineSpec pipeline) {
     ObjectMapper objectMapper = new ObjectMapper()
     objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false)
     PipelineSpec pipelineWithID = objectMapper.readValue(response.content, PipelineSpec.class)
+    pipeline.id = pipelineWithID.id
     for (taskWithID in pipelineWithID.tasks) {
         for (task in pipeline.tasks) {
             if (taskWithID.taskName == task.taskName) {
