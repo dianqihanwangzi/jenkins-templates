@@ -25,8 +25,8 @@ class Resources {
 
 
 class TaskSpec {
-    String pipelineID;
-    String taskID;
+    Integer id;
+    Integer pipelineID;
     String taskName;
     String checkerName;
     String pipelineName;
@@ -54,8 +54,8 @@ class Notify {
 
 
 class PipelineSpec {
+    Integer id;
     String pipelineName;
-    String pipelineID;
     String repo;
     String owner;
     String defaultRef;
@@ -80,6 +80,21 @@ def loadPipelineConfig(fileURL) {
 
 def createPipelineRun(PipelineSpec pipeline) {
     // create pipelinerun to tipipeline and get pipeline_id, task_id
+    response = httpRequest consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'POST', requestBody: new JsonBuilder(pipeline).toPrettyString(), url: "http://172.16.5.15:30792/pipelinerun", validResponseCodes: '200'
+    ObjectMapper objectMapper = new ObjectMapper()
+    PipelineSpec pipelineWithID = objectMapper.readValue(response.content, PipelineSpec.class)
+    for (taskWithID in pipelineWithID.tasks) {
+        for (task in pipeline.tasks) {
+            if taskWithID.taskName == task.taskName {
+                task.id = taskWithID.id
+            }
+        }
+    }
+    return pipeline
+}
+def updatePipelineRun(PipelineSpec pipeline) {
+    // create pipelinerun to tipipeline and get pipeline_id, task_id
+    response = httpRequest consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'PUT', requestBody: new JsonBuilder(pipeline).toPrettyString(), url: "http://172.16.5.15:30792/pipelinerun", validResponseCodes: '200'
 }
 
 
@@ -139,6 +154,7 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
         }
     }
     parallel jobs
+    updatePipelineRun(pipelineinfo)
 }
 
 
