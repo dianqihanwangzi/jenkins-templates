@@ -85,7 +85,7 @@ def createPipelineRun(PipelineSpec pipeline) {
     PipelineSpec pipelineWithID = objectMapper.readValue(response.content, PipelineSpec.class)
     for (taskWithID in pipelineWithID.tasks) {
         for (task in pipeline.tasks) {
-            if taskWithID.taskName == task.taskName {
+            if (taskWithID.taskName == task.taskName) {
                 task.id = taskWithID.id
             }
         }
@@ -131,7 +131,7 @@ def cacheCode(repo,commitID,branch,prID) {
 
 
 def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, String commitID, String pullRequest) {
-    pipelineinfo = createPipelineRun(pipeline)
+    pipeline = createPipelineRun(pipeline)
     cacheCode("${pipeline.owner}/${pipeline.repo}",commitID,branch,pullRequest)
     jobs = [:]
     for (task in pipeline.tasks) {
@@ -154,7 +154,7 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
         }
     }
     parallel jobs
-    updatePipelineRun(pipelineinfo)
+    updatePipelineRun(pipeline)
 }
 
 
