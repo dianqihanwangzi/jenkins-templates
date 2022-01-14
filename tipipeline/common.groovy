@@ -151,24 +151,25 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
     cacheCode("${pipeline.owner}/${pipeline.repo}",commitID,branch,pullRequest)
     jobs = [:]
     for (task in pipeline.tasks) {
+        def originTask = task
         jobs[task.taskName] = {
             def cacheCodeUrl = "${FILE_SERVER_URL}/download/builds/pingcap/devops/cachecode/${pipeline.repo}/${commitID}/${pipeline.repo}.tar.gz"
-            task.pipelineName = pipeline.pipelineName
-            task.triggerEvent = triggerEvent
-            task.branch = branch 
-            task.commitID = commitID
-            task.pullRequest = pullRequest
-            task.cacheCodeURL = cacheCodeUrl
-            task.repo = pipeline.repo
-            task.owner = pipeline.owner
-            def taskJsonString = new JsonBuilder(task).toPrettyString()
+            originTask.pipelineName = pipeline.pipelineName
+            originTask.triggerEvent = triggerEvent
+            originTask.branch = branch 
+            originTask.commitID = commitID
+            originTask.pullRequest = pullRequest
+            originTask.cacheCodeURL = cacheCodeUrl
+            originTask.repo = pipeline.repo
+            originTask.owner = pipeline.owner
+            def taskJsonString = new JsonBuilder(originTask).toPrettyString()
 
             def params = [
             string(name: "INPUT_JSON", value: taskJsonString),
             ]
-            def result = build(job: task.checkerName, parameters: params, wait: true, propagate: false)
+            def result = build(job: originTask.checkerName, parameters: params, wait: true, propagate: false)
             if (result.getResult() != "SUCCESS") {
-                throw new Exception("${task.taskName} failed")
+                throw new Exception("${originTask.taskName} failed")
             }
         }
     }
