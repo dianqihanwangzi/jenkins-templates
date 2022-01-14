@@ -145,7 +145,7 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
     pipeline.branch = branch
     pipeline.pullRequest = pullRequest
     pipeline.triggerEvent = triggerEvent
-    pipeline.status = "running"
+    pipeline.status = "created"
     pipeline.jenkinsRunURL = RUN_DISPLAY_URL
     pipeline = createPipelineRun(pipeline)
     cacheCode("${pipeline.owner}/${pipeline.repo}",commitID,branch,pullRequest)
@@ -161,14 +161,19 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
             task.cacheCodeURL = cacheCodeUrl
             task.repo = pipeline.repo
             task.owner = pipeline.owner
-            taskJsonString = new JsonBuilder(task).toPrettyString()
+            def taskJsonString = new JsonBuilder(task).toPrettyString()
 
-            params = [
+            def params = [
             string(name: "INPUT_JSON", value: taskJsonString),
             ]
-            result = build(job: task.checkerName, parameters: params, wait: true, propagate: false)
+            def result = build(job: task.checkerName, parameters: params, wait: true, propagate: false)
+            if (result.getResult() != "SUCCESS") {
+                throw new Exception("${task.taskName} failed")
+            }
         }
     }
+    pipeline.status = "running" 
+    updatePipelineRun(pipeline)
     parallel jobs
     pipeline.status = "passed" 
     updatePipelineRun(pipeline)
