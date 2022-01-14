@@ -38,6 +38,7 @@ class TaskSpec {
     String repo;
     String cacheCodeURL;
     String status;
+    String jenkinsRunURL;
     Integer retry;
     Integer timeout;
     Credential[] credentials;
@@ -64,6 +65,7 @@ class PipelineSpec {
     String pullRequest;
     String commitID;
     String status;
+    String jenkinsRunURL;
     String defaultRef;
     Triggers triggers;
     Notify  notify;
@@ -88,6 +90,7 @@ def createPipelineRun(PipelineSpec pipeline) {
     // create pipelinerun to tipipeline and get pipeline_id, task_id
     response = httpRequest consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'POST', requestBody: new JsonBuilder(pipeline).toPrettyString(), url: "http://172.16.5.15:30792/pipelinerun", validResponseCodes: '200'
     ObjectMapper objectMapper = new ObjectMapper()
+    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false)
     PipelineSpec pipelineWithID = objectMapper.readValue(response.content, PipelineSpec.class)
     for (taskWithID in pipelineWithID.tasks) {
         for (task in pipeline.tasks) {
@@ -142,6 +145,7 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
     pipeline.pullRequest = pullRequest
     pipeline.triggerEvent = triggerEvent
     pipeline.status = "running"
+    pipeline.jenkinsRunURL = RUN_DISPLAY_URL
     pipeline = createPipelineRun(pipeline)
     cacheCode("${pipeline.owner}/${pipeline.repo}",commitID,branch,pullRequest)
     jobs = [:]
