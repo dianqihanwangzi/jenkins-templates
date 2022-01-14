@@ -131,6 +131,11 @@ def cacheCode(repo,commitID,branch,prID) {
 
 
 def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, String commitID, String pullRequest) {
+    pipeline.commitID = commitID
+    pipeline.branch = branch
+    pipeline.pullRequest = pullRequest
+    pipeline.triggerEvent = triggerEvent
+    pipeline.status = "running"
     pipeline = createPipelineRun(pipeline)
     cacheCode("${pipeline.owner}/${pipeline.repo}",commitID,branch,pullRequest)
     jobs = [:]
@@ -154,6 +159,7 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
         }
     }
     parallel jobs
+    pipeline.status = "passed" 
     updatePipelineRun(pipeline)
 }
 
