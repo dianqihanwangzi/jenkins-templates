@@ -37,6 +37,7 @@ class TaskSpec {
     String owner;
     String repo;
     String cacheCodeURL;
+    String status;
     Integer retry;
     Integer timeout;
     Credential[] credentials;
@@ -58,6 +59,11 @@ class PipelineSpec {
     String pipelineName;
     String repo;
     String owner;
+    String triggerEvent;
+    String branch;
+    String pullRequest;
+    String commitID;
+    String status;
     String defaultRef;
     Triggers triggers;
     Notify  notify;
