@@ -53,7 +53,7 @@ def runBody = {config ->
     currentBuild.result = "SUCCESS"
 }
 
-taskConfig = common.loadConfig(INPUT_JSON)
+taskConfig = common.loadTaskConfig(INPUT_JSON)
 common.runWithPod(taskConfig,runBody) 
 
 
