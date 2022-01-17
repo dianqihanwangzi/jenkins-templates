@@ -78,7 +78,7 @@ def loadPipelineConfig(fileURL) {
     yamlRequest = httpRequest url: fileURL, httpMode: 'GET'
     PipelineSpec pipelineSpec = objectMapper.readValue(yamlRequest.content, PipelineSpec.class)
     repoInfo = pipelineSpec.repo.split("/")
-    if (repoInfo.length==2){
+    if (repoInfo.length()==2){
         pipelineSpec.owner = repoInfo[0]
         pipelineSpec.repo = repoInfo[1]
     }
@@ -208,14 +208,14 @@ def defaultResourceValue(Resources resource) {
         resp.limits.memory = "2Gi"
         return resp
     }
-    if (resource.requests == null || resource.requests.cpu.length < 1 || resource.requests.memory.length < 1) {
+    if (resource.requests == null || resource.requests.cpu.length() < 1 || resource.requests.memory.length() < 1) {
         resp.requests.cpu = "1000m"
         resp.requests.memory = "2Gi"
         resp.limits.cpu = "1000m"
         resp.limits.memory = "2Gi"
         return resp
     }
-    if (resource.limits == null || resource.limits.cpu.length < 1 || resource.limits.memory.length < 1) {
+    if (resource.limits == null || resource.limits.cpu.length() < 1 || resource.limits.memory.length() < 1) {
         resp.limits.cpu = resource.requests.cpu
         resp.limits.memory = resource.requests.memory
         return resp
