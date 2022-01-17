@@ -39,7 +39,7 @@ def runBody = {config ->
         def sha256sumFilepath = "builds/pingcap/devops/atom-build/${config.repo}/${config.commitID}/${config.repo}.tar.gz.sha256sum"
         def outputDir = config.params["outputDir"]
         sh """
-            tar -czf ${config.repo}}.tar.gz ${config.repo}/${outputDir}
+            tar -czf ${config.repo}.tar.gz ${config.repo}/${outputDir}
             sha256sum ${config.repo}.tar.gz > ${config.repo}.tar.gz.sha256sum   
             curl -F ${filepath}=@${config.repo}.tar.gz ${FILE_SERVER_URL}/upload
         """
