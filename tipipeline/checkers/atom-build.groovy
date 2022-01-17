@@ -22,9 +22,9 @@ def runBody = {config ->
     }
 
     stage("Download code from fileserver") {
-        sh '''
+        sh """
             wget -q -c ${config.cacheCodeURL} -O - | tar -xz
-        '''
+        """
     }
 
     stage("Build") {
