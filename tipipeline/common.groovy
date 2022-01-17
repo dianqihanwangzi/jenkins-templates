@@ -78,7 +78,7 @@ def loadPipelineConfig(fileURL) {
     yamlRequest = httpRequest url: fileURL, httpMode: 'GET'
     PipelineSpec pipelineSpec = objectMapper.readValue(yamlRequest.content, PipelineSpec.class)
     repoInfo = pipelineSpec.repo.split("/")
-    if (repoInfo.length()==2){
+    if (repoInfo.length == 2){
         pipelineSpec.owner = repoInfo[0]
         pipelineSpec.repo = repoInfo[1]
     }
