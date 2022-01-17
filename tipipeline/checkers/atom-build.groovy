@@ -9,7 +9,7 @@ properties([
 ])
 
 common = {}
-node("${GO1160_BUILD_SLAVE}") {
+node("lightweight_pod") {
     container("golang") {
         checkout scm
         common = load "tipipeline/common.groovy"
