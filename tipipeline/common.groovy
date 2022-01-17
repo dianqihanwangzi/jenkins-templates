@@ -181,7 +181,7 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
     } catch (Exception e) {
         pipeline.status = "failed"
         updatePipelineRun(pipeline)
-
+        throw e
     }
     pipeline.status = "passed" 
     updatePipelineRun(pipeline)
@@ -285,6 +285,7 @@ def runWithPod(TaskSpec config, Closure body) {
             config.status = "failed"
             config.result = currentBuild.description
             updateTaskStatus(config)
+            throw e
         } 
         config.status = "passed"
         config.result = currentBuild.description
