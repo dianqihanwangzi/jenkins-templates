@@ -39,6 +39,7 @@ class TaskSpec {
     String cacheCodeURL;
     String status;
     String jenkinsRunURL;
+    String result;
     Integer retry;
     Integer timeout;
     Credential[] credentials;
@@ -141,43 +142,50 @@ def cacheCode(repo,commitID,branch,prID) {
 
 
 def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, String commitID, String pullRequest) {
-    pipeline.commitID = commitID
-    pipeline.branch = branch
-    pipeline.pullRequest = pullRequest
-    pipeline.triggerEvent = triggerEvent
-    pipeline.status = "created"
-    pipeline.jenkinsRunURL = RUN_DISPLAY_URL
-    pipeline = createPipelineRun(pipeline)
-    cacheCode("${pipeline.owner}/${pipeline.repo}",commitID,branch,pullRequest)
-    jobs = [:]
-    for (task in pipeline.tasks) {
-        def originTask = task
-        jobs[task.taskName] = {
-            def cacheCodeUrl = "${FILE_SERVER_URL}/download/builds/pingcap/devops/cachecode/${pipeline.repo}/${commitID}/${pipeline.repo}.tar.gz"
-            originTask.pipelineName = pipeline.pipelineName
-            originTask.triggerEvent = triggerEvent
-            originTask.branch = branch 
-            originTask.commitID = commitID
-            originTask.pullRequest = pullRequest
-            originTask.cacheCodeURL = cacheCodeUrl
-            originTask.repo = pipeline.repo
-            originTask.owner = pipeline.owner
-            def taskJsonString = new JsonBuilder(originTask).toPrettyString()
+    try {
+        pipeline.commitID = commitID
+        pipeline.branch = branch
+        pipeline.pullRequest = pullRequest
+        pipeline.triggerEvent = triggerEvent
+        pipeline.status = "created"
+        pipeline.jenkinsRunURL = RUN_DISPLAY_URL
+        pipeline = createPipelineRun(pipeline)
+        cacheCode("${pipeline.owner}/${pipeline.repo}",commitID,branch,pullRequest)
+        jobs = [:]
+        for (task in pipeline.tasks) {
+            def originTask = task
+            jobs[task.taskName] = {
+                def cacheCodeUrl = "${FILE_SERVER_URL}/download/builds/pingcap/devops/cachecode/${pipeline.repo}/${commitID}/${pipeline.repo}.tar.gz"
+                originTask.pipelineName = pipeline.pipelineName
+                originTask.triggerEvent = triggerEvent
+                originTask.branch = branch 
+                originTask.commitID = commitID
+                originTask.pullRequest = pullRequest
+                originTask.cacheCodeURL = cacheCodeUrl
+                originTask.repo = pipeline.repo
+                originTask.owner = pipeline.owner
+                def taskJsonString = new JsonBuilder(originTask).toPrettyString()
 
-            def params = [
-            string(name: "INPUT_JSON", value: taskJsonString),
-            ]
-            def result = build(job: originTask.checkerName, parameters: params, wait: true, propagate: false)
-            if (result.getResult() != "SUCCESS") {
-                throw new Exception("${originTask.taskName} failed")
+                def params = [
+                string(name: "INPUT_JSON", value: taskJsonString),
+                ]
+                def result = build(job: originTask.checkerName, parameters: params, wait: true, propagate: false)
+                if (result.getResult() != "SUCCESS") {
+                    throw new Exception("${originTask.taskName} failed")
+                }
             }
         }
+        pipeline.status = "running" 
+        updatePipelineRun(pipeline)
+        parallel jobs
+    } catch (Exception e) {
+        pipeline.status = "failed"
+        updatePipelineRun(pipeline)
+
+    }else {
+        pipeline.status = "passed" 
+        updatePipelineRun(pipeline)
     }
-    pipeline.status = "running" 
-    updatePipelineRun(pipeline)
-    parallel jobs
-    pipeline.status = "passed" 
-    updatePipelineRun(pipeline)
 }
 
 
@@ -225,8 +233,9 @@ def defaultResourceValue(Resources resource) {
 }
 
 
-def updateTaskStatus(String status,TaskSpec config) {
+def updateTaskStatus(TaskSpec config) {
     // update taskrun to tipipeline by task_id
+    response = httpRequest consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'PUT', requestBody: new JsonBuilder(config).toPrettyString(), url: "http://172.16.5.15:30792/taskrun", validResponseCodes: '200'
 }
 
 def runWithPod(TaskSpec config, Closure body) {
@@ -259,20 +268,30 @@ def runWithPod(TaskSpec config, Closure body) {
                             serverPath: '/mnt/ci.pingcap.net-nfs', readOnly: false),
             ],
     ) {
-        timeout(time: config.timeout, unit: 'MINUTES') {
-            retry(config.retry){
-                node(label) {
-                    container("node") {
-                        updateTaskStatus("running",config)
-                        println "debug command:\nkubectl -n ${namespace} exec -ti ${NODE_NAME} bash"
-                        status = body(config)
-                        updateTaskStatus(status,config)
+        try {
+            config.jenkinsRunURL = RUN_DISPLAY_URL
+            config.status = "running"
+            updateTaskStatus(config)
+            timeout(time: config.timeout, unit: 'MINUTES') {
+                retry(config.retry){
+                    node(label) {
+                        container("node") {
+                            println "debug command:\nkubectl -n ${namespace} exec -ti ${NODE_NAME} bash"
+                            body(config) 
+                        }
                     }
                 }
             }
+        } catch (Exception e) {
+            config.status = "failed"
+            config.result = currentBuild.description
+            updateTaskStatus(config)
+        } else {
+            config.status = "passed"
+            config.result = currentBuild.description
+            updateTaskStatus(config)
         }
-    }
-    
+    }  
 }
 
 

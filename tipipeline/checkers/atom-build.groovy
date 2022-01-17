@@ -51,6 +51,7 @@ def runBody = {config ->
     }
 
     currentBuild.result = "SUCCESS"
+    currentBuild.description = "build success"
 }
 
 taskConfig = common.loadTaskConfig(INPUT_JSON)
