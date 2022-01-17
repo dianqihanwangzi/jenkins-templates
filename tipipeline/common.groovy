@@ -268,6 +268,15 @@ def runWithPod(TaskSpec config, Closure body) {
             ],
     ) {
         try {
+            credentialList =[]
+            for (credential in config.credentials) {
+                credentialList.push(string(credentialsId: credential.jenkinsID, variable: credential.key))
+            }
+            varList = []
+            for (var in config.vars) {
+                varList.push("${var.key}=${var.value}")
+            }
+            
             config.jenkinsRunURL = RUN_DISPLAY_URL
             config.status = "running"
             updateTaskStatus(config)
@@ -276,7 +285,11 @@ def runWithPod(TaskSpec config, Closure body) {
                     node(label) {
                         container("node") {
                             println "debug command:\nkubectl -n ${namespace} exec -ti ${NODE_NAME} bash"
-                            body(config) 
+                            withCredentials(credentialList) {
+                                withEnv(varList) {
+                                    body(config) 
+                                }
+                            }  
                         }
                     }
                 }
