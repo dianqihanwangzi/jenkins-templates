@@ -182,10 +182,9 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
         pipeline.status = "failed"
         updatePipelineRun(pipeline)
 
-    }else {
-        pipeline.status = "passed" 
-        updatePipelineRun(pipeline)
     }
+    pipeline.status = "passed" 
+    updatePipelineRun(pipeline)
 }
 
 
@@ -286,12 +285,11 @@ def runWithPod(TaskSpec config, Closure body) {
             config.status = "failed"
             config.result = currentBuild.description
             updateTaskStatus(config)
-        } else {
-            config.status = "passed"
-            config.result = currentBuild.description
-            updateTaskStatus(config)
-        }
-    }  
+        } 
+        config.status = "passed"
+        config.result = currentBuild.description
+        updateTaskStatus(config)
+}  
 }
 
 
