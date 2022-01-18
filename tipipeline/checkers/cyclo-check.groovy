@@ -20,7 +20,7 @@ def runBody = {config ->
         def ws = pwd()
         dir(config.repo) {
             stage(config.taskName) {
-                println onfig.taskName
+                println config.taskName
             }
             stage("Download code from fileserver") {
                 sh """
