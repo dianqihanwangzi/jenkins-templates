@@ -53,6 +53,8 @@ class Triggers {
 }
 
 class Notify {
+    String[] email;
+    String[] lark;
 }
 
 
@@ -73,7 +75,9 @@ class PipelineSpec {
     TaskSpec[] tasks;
 }
 
-def loadPipelineConfig(fileURL) {
+PIPELINE_RUN_API_ENDPOINT = "http://172.16.5.15:30792/pipelinerun"
+
+def loadPipelineConfig(fileURL, pullRequestAuthor, triggerAuthor) {
     ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory())
     objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false)
     yamlRequest = httpRequest url: fileURL, httpMode: 'GET'
@@ -83,13 +87,19 @@ def loadPipelineConfig(fileURL) {
         pipelineSpec.owner = repoInfo[0]
         pipelineSpec.repo = repoInfo[1]
     }
+    if (pullRequestAuthor != "" && pipelineSpec.notify != null && pipelineSpec.notify.lark != null) {
+        pipelineSpec.notify.lark << pullRequestAuthor
+    }
+    if (triggerAuthor != "" && pipelineSpec.notify != null && pipelineSpec.notify.lark != null) {
+        pipelineSpec.notify.lark << triggerAuthor
+    }
     return pipelineSpec
 }
 
 
 def createPipelineRun(PipelineSpec pipeline) {
     // create pipelinerun to tipipeline and get pipeline_id, task_id
-    response = httpRequest consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'POST', requestBody: new JsonBuilder(pipeline).toPrettyString(), url: "http://172.16.5.15:30792/pipelinerun", validResponseCodes: '200'
+    response = httpRequest consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'POST', requestBody: new JsonBuilder(pipeline).toPrettyString(), url: PIPELINE_RUN_API_ENDPOINT, validResponseCodes: '200'
     ObjectMapper objectMapper = new ObjectMapper()
     objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false)
     PipelineSpec pipelineWithID = objectMapper.readValue(response.content, PipelineSpec.class)
@@ -105,7 +115,7 @@ def createPipelineRun(PipelineSpec pipeline) {
 }
 def updatePipelineRun(PipelineSpec pipeline) {
     // create pipelinerun to tipipeline and get pipeline_id, task_id
-    response = httpRequest consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'PUT', requestBody: new JsonBuilder(pipeline).toPrettyString(), url: "http://172.16.5.15:30792/pipelinerun", validResponseCodes: '200'
+    response = httpRequest consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'PUT', requestBody: new JsonBuilder(pipeline).toPrettyString(), url: PIPELINE_RUN_API_ENDPOINT, validResponseCodes: '200'
 }
 
 
@@ -126,22 +136,36 @@ def triggerTask(taskName,params) {
     return result
 }
 
-def cacheCode(repo,commitID,branch,prID) {
-    cacheCodeParams = [
-        string(name: 'ORG_AND_REPO', value: repo),
-        string(name: 'COMMIT_ID', value: commitID),
-    ]
-    if (branch != "" && branch != null ) {
-        cacheCodeParams.push(string(name: 'BRANCH', value: branch))
+def cacheCode(org_and_repo,commitID,branch,prID) {
+    stage("cache code") {
+        println("cache code: ${org_and_repo} ${commitID} ${branch} ${prID}")
+        def repo = org_and_repo.split("/")[1]
+        def org = org_and_repo.split("/")[0]
+        def cacheCodeUrl = "${FILE_SERVER_URL}/download/builds/pingcap/devops/cachecode/${repo}/${commitID}/${repo}.tar.gz"
+        def cacheAlreadyExist = sh(returnStatus: true, script: """
+                if curl --output /dev/null --silent --head --fail ${cacheCodeUrl}; then exit 0; else exit 1; fi
+                """)
+        if (cacheAlreadyExist == 0) {
+            println("cache already exist: ${cacheCodeUrl}")
+        } else {
+            println("start cache-code pipeline")
+            cacheCodeParams = [
+                string(name: 'ORG_AND_REPO', value: org_and_repo),
+                string(name: 'COMMIT_ID', value: commitID),
+            ]
+            if (branch != "" && branch != null ) {
+                cacheCodeParams.push(string(name: 'BRANCH', value: branch))
+            }
+            if (prID != "" && prID != null ) {
+                cacheCodeParams.push(string(name: 'PULL_ID', value: prID))
+            }
+            triggerTask("cache-code",cacheCodeParams)
+        }
     }
-    if (prID != "" && prID != null ) {
-        cacheCodeParams.push(string(name: 'PULL_ID', value: prID))
-    }
-    triggerTask("cache-code",cacheCodeParams)
 }
 
 
-def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, String commitID, String pullRequest) {
+def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, String commitID, String pullRequest, String triggerGithubID) {
     try {
         pipeline.commitID = commitID
         pipeline.branch = branch
@@ -152,10 +176,11 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
         pipeline = createPipelineRun(pipeline)
         cacheCode("${pipeline.owner}/${pipeline.repo}",commitID,branch,pullRequest)
         jobs = [:]
+        notify_results_array = []
         for (task in pipeline.tasks) {
             def originTask = task
             jobs[task.taskName] = {
-                def cacheCodeUrl = "${FILE_SERVER_URL}/download/builds/pingcap/devops/cachecode/${pipeline.repo}/${commitID}/${pipeline.repo}.tar.gz"
+                def cacheCodeUrl = "${FILE_SERVER_URL}/download/builds/pingcap/devops/cachecode/${pipeline.repo}/${pipeline.commitID}/${pipeline.repo}.tar.gz"
                 originTask.pipelineName = pipeline.pipelineName
                 originTask.triggerEvent = triggerEvent
                 originTask.branch = branch 
@@ -170,6 +195,29 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
                 string(name: "INPUT_JSON", value: taskJsonString),
                 ]
                 def result = build(job: originTask.checkerName, parameters: params, wait: true, propagate: false)
+                if (result.getResult() != "SUCCESS" && originTask.taskName in ["ut-check", "gosec-check"]) {
+                    println("Detail: ${CI_JENKINS_BASE_URL}/blue/organizations/jenkins/${result.getFullProjectName()}/detail/${result.getFullProjectName()}/${result.getNumber().toString()}/tests")
+                } else {
+                    println("Detail: ${CI_JENKINS_BASE_URL}/blue/organizations/jenkins/${result.getFullProjectName()}/detail/${result.getFullProjectName()}/${result.getNumber().toString()}/pipeline")
+                }
+                if (result.getDescription() != null && result.getDescription() != "") {
+                    println("task ${result.getResult()}: ${result.getDescription()}")
+                } else {
+                    println("task ${result.getResult()}")
+                }
+                notify_results_array << [
+                    name: originTask.taskName, 
+                    checkName: originTask.checkerName,
+                    type: "task",
+                    result: result.getResult(), 
+                    fullDisplayName: result.getFullDisplayName(), 
+                    buildNumber: result.getNumber().toString(),
+                    summary: result.getDescription(),
+                    durationStr: result.getDurationString(),
+                    duration: result.getDuration(),
+                    startTime: result.getStartTimeInMillis(),
+                    url: "${CI_JENKINS_BASE_URL}/blue/organizations/jenkins/${result.getFullProjectName()}/detail/${result.getFullProjectName()}/${result.getNumber().toString()}/pipeline"
+                ]
                 if (result.getResult() != "SUCCESS") {
                     throw new Exception("${originTask.taskName} failed")
                 }
@@ -177,14 +225,67 @@ def runPipeline(PipelineSpec pipeline, String triggerEvent, String branch, Strin
         }
         pipeline.status = "running" 
         updatePipelineRun(pipeline)
-        parallel jobs
+        stage(pipeline.triggerEvent) {
+            parallel jobs
+        }
     } catch (Exception e) {
         pipeline.status = "failed"
         updatePipelineRun(pipeline)
-        throw e
+        println("Pipeline ${pipeline.pipelineName} failed")
+        println("error: ${e.getMessage()}")
+    } finally {
+
+        println("Pipeline ${pipeline.pipelineName} finished")
+        if (pipeline.status == "failed") {
+            currentBuild.result = "FAILURE"
+        } else {
+            pipeline.status = "passed" 
+            updatePipelineRun(pipeline)
+            currentBuild.result = "SUCCESS"
+        }
+        def trigger = ""
+        if (triggerGithubID != "") {
+            trigger = triggerGithubID
+        }
+        def receiver_lark = []
+        def receiver_email = []
+        if (pipeline.notify != null && pipeline.notify.lark != null) {
+            receiver_lark = pipeline.notify.lark
+        }
+        if (pipeline.notify != null && pipeline.notify.email != null) {
+            receiver_email = pipeline.notify.email
+        }
+        notify_results_array << [
+            name: pipeline.pipelineName,
+            result: currentBuild.result,
+            buildNumber: BUILD_NUMBER,
+            type: "TiPipeline",
+            commitID: pipeline.commitID, 
+            branch: pipeline.branch,
+            pullRequest: pipeline.pullRequest,
+            repo: pipeline.repo,
+            org: pipeline.owner,
+            url: RUN_DISPLAY_URL, 
+            startTime: taskStartTimeInMillis, 
+            duration: System.currentTimeMillis() - taskStartTimeInMillis,
+            triggerEvent: pipeline.triggerEvent,
+            receiver_lark: receiver_lark,
+            receiver_email: receiver_email,
+            trigger: trigger,
+        ]
+        def resultJson = groovy.json.JsonOutput.toJson(notify_results_array)
+        writeJSON file: 'ciResult.json', json: resultJson, pretty: 4
+        sh 'cat ciResult.json'
+        archiveArtifacts artifacts: 'ciResult.json', fingerprint: true
+        if (currentBuild.result == "FAILURE") {
+            sh """
+                wget ${FILE_SERVER_URL}/download/rd-atom-agent/agent-tipipeline.py
+                python3 agent-tipipeline.py ciResult.json
+            """  
+        }
+        
     }
-    pipeline.status = "passed" 
-    updatePipelineRun(pipeline)
+
 }
 
 
@@ -238,7 +339,7 @@ def updateTaskStatus(TaskSpec config) {
 }
 
 def runWithPod(TaskSpec config, Closure body) {
-    def label = config.pipelineName + "-" + config.taskName + "-" + UUID.randomUUID().toString()
+    def label = config.repo + config.pipelineName + "-" + config.taskName + "-" + "${BUILD_NUMBER}"
     def cloud = "kubernetes"
     def namespace = "jenkins-tidb"
     def jnlp_docker_image = "jenkins/inbound-agent:4.3-4"
