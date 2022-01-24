@@ -8,8 +8,6 @@
 //         ])
 // ])
 
-REF = "refs/heads/master"
-COMMIT_ID = "493fe783d76f36f71295d2b4fa8fc8caacbf73c7"
 
 BRANCH = REF
 if (REF.startsWith("refs/heads/")) {
