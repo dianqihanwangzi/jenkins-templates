@@ -1,12 +1,12 @@
-properties([
-        parameters([
-                string(
-                        defaultValue: '',
-                        name: 'PIPELINE_YAML',
-                        trim: true
-                ),
-        ])
-])
+// properties([
+//         parameters([
+//                 string(
+//                         defaultValue: '',
+//                         name: 'PIPELINE_YAML',
+//                         trim: true
+//                 ),
+//         ])
+// ])
 
 def get_sha(repo,branch) {
     sh "curl -s ${FILE_SERVER_URL}/download/builds/pingcap/ee/get_hash_from_github.py > gethash.py"
@@ -15,6 +15,7 @@ def get_sha(repo,branch) {
 
 common = {}
 commitID = ""
+taskStartTimeInMillis = System.currentTimeMillis()
 
 node("lightweight_pod") {
     container("golang") {
@@ -25,9 +26,12 @@ node("lightweight_pod") {
         // """
         // common = load "common.groovy"
 
-        pipelineSpec = common.loadPipelineConfig(PIPELINE_YAML)
+        pipelineSpec = common.loadPipelineConfig(PIPELINE_YAML, "", "")
         commitID = get_sha(pipelineSpec.repo,pipelineSpec.defaultRef)
+        println "commitID: ${commitID}"
+        if (commitID == "" || commitID == null) {
+            throw "commitID is empty"
+        }
+        common.runPipeline(pipelineSpec, "daily", pipelineSpec.defaultRef, commitID, "", "")
     }
 }
-
-common.runPipeline(pipelineSpec, "daily", pipelineSpec.defaultRef, String commitID, "")
