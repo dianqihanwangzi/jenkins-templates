@@ -374,6 +374,7 @@ def runWithPod(TaskSpec config, Closure body) {
                 credentialList.push(string(credentialsId: credential.jenkinsID, variable: credential.key))
             }
             varList = []
+            varList.push("TARGET_BRANCH=${config.branch}")
             for (var in config.vars) {
                 varList.push("${var.key}=${var.value}")
             }
