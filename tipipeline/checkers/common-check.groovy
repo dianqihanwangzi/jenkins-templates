@@ -17,7 +17,7 @@ node("lightweight_pod") {
 } 
 def runBody = {config ->
     def ws = pwd()
-    dir() {
+    dir(config.repo) {
         stage(config.taskName) {
             println config.taskName
         }
