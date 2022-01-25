@@ -370,14 +370,21 @@ def runWithPod(TaskSpec config, Closure body) {
     ) {
         try {
             credentialList =[]
+            shellScript = config.params["shellScript"]
+            if (shellScript == null) {
+                shellScript = ""
+            }
             for (credential in config.credentials) {
                 credentialList.push(string(credentialsId: credential.jenkinsID, variable: credential.key))
+                shellScript = shellScript.replace("\${" + credential.key + "}" , "\$" + credential.key) 
             }
             varList = []
             varList.push("TARGET_BRANCH=${config.branch}")
             for (var in config.vars) {
                 varList.push("${var.key}=${var.value}")
+                shellScript = shellScript.replace("\${" + var.key + "}" , "\$" + var.key) 
             }
+            config.params["shellScript"] = shellScript
             
             config.jenkinsRunURL = RUN_DISPLAY_URL
             config.status = "running"
