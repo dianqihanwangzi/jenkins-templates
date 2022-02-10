@@ -679,11 +679,15 @@ def release(product, label) {
 
     if (label != '') {
         container(label) {
-            sh buildsh[product]
+            withCredentials([string(credentialsId: 'sre-bot-token', variable: 'TOKEN')]) {
+                sh buildsh[product]
+            }
             packageBinary()
         }
     } else {
-        sh buildsh[product]
+        withCredentials([string(credentialsId: 'sre-bot-token', variable: 'TOKEN')]) {
+            sh buildsh[product]
+        }
         packageBinary()
     }
 }
