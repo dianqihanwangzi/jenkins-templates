@@ -266,6 +266,7 @@ buildsh["tidb-ctl"] = """
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 go build -o binarys/${PRODUCT}
 rm -rf ${TARGET}
 mkdir -p ${TARGET}/bin
@@ -285,6 +286,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 make clean
 git checkout .
 if [ ${failpoint} == 'true' ]; then
@@ -330,6 +332,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 make clean
 git checkout .
 make
@@ -348,6 +351,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 git checkout .
 if [ ${EDITION} == 'enterprise' ]; then
     export PD_EDITION=Enterprise
@@ -372,6 +376,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 make clean
 make build
 rm -rf ${TARGET}
@@ -389,6 +394,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 make build
 rm -rf ${TARGET}
 mkdir -p ${TARGET}/bin    
@@ -406,6 +412,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 make dm
 ls -alh bin/
 rm -rf ${TARGET}
@@ -431,6 +438,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 if [ ${failpoint} == 'true' ]; then
     make failpoint-enable
 fi;
@@ -454,6 +462,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 if [ ${REPO} == "tidb" ]; then
     make build_dumpling
 else
@@ -474,6 +483,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 make
 rm -rf ${TARGET}
 mkdir -p ${TARGET}/bin    
@@ -490,6 +500,7 @@ fi;
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 make syncer
 make loader
 rm -rf ${TARGET}
@@ -629,6 +640,7 @@ buildsh["tiem"] = """
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 make build
 """
 
@@ -636,6 +648,7 @@ buildsh["tidb-test"] = """
 if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
     export PATH=${binPath}
 fi;
+go version
 if [ -d "partition_test/build.sh" ]; then
     cd partition_test
     bash build.sh
@@ -654,6 +667,10 @@ fi;
 """
 
 buildsh["enterprise-plugin"] = """
+if [[ ${ARCH} == 'arm64' ||  ${OS} == 'darwin' ]]; then
+    export PATH=${binPath}
+fi;
+go version
 cd ../
 rm -rf tidb
 git clone --depth 1 https://github.com/pingcap/tidb.git
@@ -725,14 +742,12 @@ def release(product, label) {
 
     if (label != '') {
         container(label) {
-            sh "go version"
             withCredentials([string(credentialsId: 'sre-bot-token', variable: 'TOKEN')]) {
                 sh buildsh[product]
             }
             packageBinary()
         }
     } else {
-        sh "go version"
         withCredentials([string(credentialsId: 'sre-bot-token', variable: 'TOKEN')]) {
             sh buildsh[product]
         }
