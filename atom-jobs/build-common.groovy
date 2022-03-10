@@ -160,11 +160,11 @@ def String needUpgradeGoVersion(String tag,String branch) {
 def goBuildPod = "build_go118rc1"
 def GO_BIN_PATH = "/usr/local/go1.18rc1/bin"
 goVersion = needUpgradeGoVersion(params.RELEASE_TAG,params.TARGET_BRANCH)
-if ( goVersion = "go1.16" ) {
+if ( goVersion == "go1.16" ) {
     goBuildPod = "${GO1160_BUILD_SLAVE}"
     GO_BIN_PATH = "/usr/local/go1.16.4/bin"
 }
-if ( goVersion = "go1.13" ) {
+if ( goVersion == "go1.13" ) {
     goBuildPod = "${GO_BUILD_SLAVE}"
     GO_BIN_PATH = "/usr/local/go/bin"
 }
