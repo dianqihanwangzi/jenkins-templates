@@ -134,32 +134,39 @@ string trimPrefix = {
     }
 
 // choose which go version to use. 
-def boolean needUpgradeGoVersion(String tag,String branch) {
-    if (tag.startsWith("v") && tag > "v5.1") {
-        println "tag=${tag} need upgrade go version"
-        return true
+def String needUpgradeGoVersion(String tag,String branch) {
+    goVersion="go1.18"
+    if (tag.startsWith("v") && tag <= "v5.1") {
+        return "go1.13"
     }
-    if (branch.startsWith("master") || branch.startsWith("hz-poc") || branch.startsWith("main") || branch.startsWith("arm-dup") ) {
-        println "targetBranch=${branch} need upgrade go version"
-        return true
+    if (tag.startsWith("v") && tag > "v5.1" && tag < "v6.0") {
+        return "go1.16"
     }
-    if (branch.startsWith("release-")) {
-        if (isMoreRecentOrEqual(trimPrefix(branch), trimPrefix("release-5.1"))) {
-            println "targetBranch=${branch} need upgrade go version"
-            return true
-        }
+    if (branch.startsWith("release-") && branch <= "release-5.1"){
+        return "go1.13"
+    }
+    if (branch.startsWith("release-") && branch > "release-5.1" && branch < "release-6.0"){
+        return "go1.16"
+    }
+    if (branch.startsWith("hz-poc") || branch.startsWith("arm-dup") ) {
+        return "go1.16"
     }
     if (REPO == "tiem") {
-        return true
+        return "go1.16"
     }
-    return false
+    return "go1.18"
 }
 
-def goBuildPod = "${GO_BUILD_SLAVE}"
-def GO_BIN_PATH = "/usr/local/go/bin"
-if (needUpgradeGoVersion(params.RELEASE_TAG,params.TARGET_BRANCH)) {
-   goBuildPod = "${GO1160_BUILD_SLAVE}"
-   GO_BIN_PATH = "/usr/local/go1.16.4/bin"
+def goBuildPod = "build_go118rc1"
+def GO_BIN_PATH = "/usr/local/go1.18rc1/bin"
+goVersion = needUpgradeGoVersion(params.RELEASE_TAG,params.TARGET_BRANCH)
+if ( goVersion = "go1.16" ) {
+    goBuildPod = "${GO1160_BUILD_SLAVE}"
+    GO_BIN_PATH = "/usr/local/go1.16.4/bin"
+}
+if ( goVersion = "go1.13" ) {
+    goBuildPod = "${GO_BUILD_SLAVE}"
+    GO_BIN_PATH = "/usr/local/go/bin"
 }
 
 // choose which node to use.
@@ -718,12 +725,14 @@ def release(product, label) {
 
     if (label != '') {
         container(label) {
+            sh "go version"
             withCredentials([string(credentialsId: 'sre-bot-token', variable: 'TOKEN')]) {
                 sh buildsh[product]
             }
             packageBinary()
         }
     } else {
+        sh "go version"
         withCredentials([string(credentialsId: 'sre-bot-token', variable: 'TOKEN')]) {
             sh buildsh[product]
         }
