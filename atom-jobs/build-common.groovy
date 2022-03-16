@@ -157,8 +157,8 @@ def String needUpgradeGoVersion(String tag,String branch) {
     return "go1.18"
 }
 
-def goBuildPod = "build_go118rc1"
-def GO_BIN_PATH = "/usr/local/go1.18rc1/bin"
+def goBuildPod = "${GO1180_BUILD_SLAVE}"
+def GO_BIN_PATH = "/usr/local/go1.18/bin"
 goVersion = needUpgradeGoVersion(params.RELEASE_TAG,params.TARGET_BRANCH)
 if ( goVersion == "go1.16" ) {
     goBuildPod = "${GO1160_BUILD_SLAVE}"
