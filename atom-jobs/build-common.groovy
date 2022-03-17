@@ -127,10 +127,10 @@ def String needUpgradeGoVersion(String tag,String branch) {
     if (tag.startsWith("v") && tag > "v5.1" && tag < "v6.0") {
         return "go1.16"
     }
-    if (branch.startsWith("release-") && branch <= "release-5.1"){
+    if (branch.startsWith("release-") && branch < "release-5.1"){
         return "go1.13"
     }
-    if (branch.startsWith("release-") && branch > "release-5.1" && branch < "release-6.0"){
+    if (branch.startsWith("release-") && branch >= "release-5.1" && branch < "release-6.0"){
         return "go1.16"
     }
     if (branch.startsWith("hz-poc") || branch.startsWith("arm-dup") ) {
