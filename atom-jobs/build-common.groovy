@@ -111,27 +111,12 @@ def ifFileCacheExists() {
     return false
 }
 
-@NonCPS
-boolean isMoreRecentOrEqual( String a, String b ) {
-    if (a == b) {
-        return true
-    }
-
-    [a,b]*.tokenize('.')*.collect { it as int }.with { u, v ->
-       Integer result = [u,v].transpose().findResult{ x,y -> x <=> y ?: null } ?: u.size() <=> v.size()
-       return (result == 1)
-    } 
-}
-
 // support branch example
 //  master | hz-poc
 //  relase-4.0
 //  release-4.0-20210812
 //  release-5.1
 //  release-5.3
-string trimPrefix = {
-        it.startsWith('release-') ? it.minus('release-').split("-")[0] : it 
-    }
 
 // choose which go version to use. 
 def String needUpgradeGoVersion(String tag,String branch) {
