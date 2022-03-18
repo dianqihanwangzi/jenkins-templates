@@ -107,6 +107,9 @@ def parseBuildInfo(repo) {
     if (repo == "br" && GIT_BRANCH.startsWith("release-") && GIT_BRANCH >= "release-5.2") {
         actualRepo = "tidb"
     }
+    if (repo == "dumpling" && GIT_BRANCH == "master") {
+        actualRepo = "tidb"
+    }
     // Notice: the code of dumpling has been merged to tidb from release-5.3, so we need to use tidb as actual repo
     if (repo == "dumpling" && GIT_BRANCH.startsWith("release-") && GIT_BRANCH >= "release-5.3") {
         actualRepo = "tidb"
@@ -348,7 +351,7 @@ EOF
             dockerProduct = "br"
         }
         if (repo == "tics") {
-            amd64Images = "${buildInfo.imageNameAmd64},${HARBOR_PROJECT_PREFIX}/tiflash:${GIT_BRANCH}-linux-amd64"
+            amd64Images = "${buildInfo.imageName},${HARBOR_PROJECT_PREFIX}/tiflash:${GIT_BRANCH}"
         }
         def paramsDockerAmd64 = [       
         string(name: "ARCH", value: "amd64"),
