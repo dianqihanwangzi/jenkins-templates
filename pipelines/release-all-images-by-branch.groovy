@@ -456,7 +456,7 @@ def release_one_debug(repo) {
 
 def release_master_monitoring() {
     def sha1 = get_sha("monitoring")
-    def binary = "builds/pingcap/monitoring/test/master/${sha1}/linux/monitoring.tar.gz"
+    def binary = "builds/pingcap/monitoring/test/master/${sha1}/linux-amd64/monitoring.tar.gz"
     def arch = "amd64"
     def paramsBuild = [
         string(name: "ARCH", value: arch),
@@ -476,6 +476,26 @@ def release_master_monitoring() {
         wait: true,
         parameters: paramsBuild
 
+    def binaryArm = "builds/pingcap/monitoring/test/master/${sha1}/linux-arm64/monitoring.tar.gz"
+    def archArm = "arm64"
+    def paramsBuildArm = [
+        string(name: "ARCH", value: archArm),
+        string(name: "OS", value: "linux"),
+        string(name: "EDITION", value: "community"),
+        string(name: "OUTPUT_BINARY", value: binaryArm),
+        string(name: "REPO", value: "monitoring"),
+        string(name: "PRODUCT", value: "monitoring"),
+        string(name: "GIT_HASH", value: sha1),
+        string(name: "RELEASE_TAG", value: "master"),
+        string(name: "TARGET_BRANCH", value: "master"),
+        [$class: 'BooleanParameterValue', name: 'FORCE_REBUILD', value: FORCE_REBUILD],
+    ]
+    println "paramsBuild: ${paramsBuildArm}"
+
+    build job: "build-common",
+        wait: true,
+        parameters: paramsBuildArm
+
     def imageNameAmd64 = "${HARBOR_PROJECT_PREFIX}/monitoring:master-amd64"
     def paramsDockerAmd64 = [       
         string(name: "ARCH", value: "amd64"),
@@ -494,7 +514,7 @@ def release_master_monitoring() {
     def paramsDockerArm64 = [       
         string(name: "ARCH", value: "arm64"),
         string(name: "OS", value: "linux"),
-        string(name: "INPUT_BINARYS", value: binary),
+        string(name: "INPUT_BINARYS", value: binaryArm),
         string(name: "REPO", value: "monitoring"),
         string(name: "PRODUCT", value: "monitoring"),
         string(name: "RELEASE_TAG", value: ""),
