@@ -74,32 +74,34 @@ node("lightweight_pod") {
     }
 }
 
-stage("wait for plans execution to end"){
-    currentExecIDs = planExecIDs
-    currentNum = currentExecIDs.size()
-    resultMap = [:]
-    success = true
-    finishedStatus = ["SUCCESS","FAILURE","SKIPPED","OMITTED","TIMEOUT","CANCELLED","ERROR"]
-    errorfinishedStatus = ["FAILURE","TIMEOUT","CANCELLED","ERROR"]
-    while (currentNum != 0) {
-        sleep(60)
-        finishedExecIDs = []
-        for (execID in currentExecIDs) {
-            getExecStatusURL = "${tcmsHost}api/v1/plan-executions/${execID}"
-            getExecStatus = httpRequest url: getExecStatusURL, httpMode: 'GET'
-            execStatusResp = readJSON text: getExecStatus.content
-            status = execStatusResp["status"].toString()
-            if (finishedStatus.contains(status)) {
-                finishedExecIDs.add(execID)
-                resultMap[execID] = status
-                if (errorfinishedStatus.contains(status)) {
-                    success = false
+timeout(time: taskConfig.timeout, unit: 'MINUTES') {
+    stage("wait for plans execution to end"){
+        currentExecIDs = planExecIDs
+        currentNum = currentExecIDs.size()
+        resultMap = [:]
+        success = true
+        finishedStatus = ["SUCCESS","FAILURE","SKIPPED","OMITTED","TIMEOUT","CANCELLED","ERROR"]
+        errorfinishedStatus = ["FAILURE","TIMEOUT","CANCELLED","ERROR"]
+        while (currentNum != 0) {
+            sleep(60)
+            finishedExecIDs = []
+            for (execID in currentExecIDs) {
+                getExecStatusURL = "${tcmsHost}api/v1/plan-executions/${execID}"
+                getExecStatus = httpRequest url: getExecStatusURL, httpMode: 'GET'
+                execStatusResp = readJSON text: getExecStatus.content
+                status = execStatusResp["status"].toString()
+                if (finishedStatus.contains(status)) {
+                    finishedExecIDs.add(execID)
+                    resultMap[execID] = status
+                    if (errorfinishedStatus.contains(status)) {
+                        success = false
+                    }
                 }
             }
-        }
-        for (id in finishedExecIDs) {
-            currentExecIDs.remove(id)
-            currentNum = currentNum -1
+            for (id in finishedExecIDs) {
+                currentExecIDs.remove(id)
+                currentNum = currentNum -1
+            }
         }
     }
 }
